@@ -9,7 +9,8 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "dist": "electron-builder --win --x64 --publish always"
+    "dist": "electron-builder --win --x64 --publish always",
+    "store": "electron-builder --win appx --x64 --config store.config.js --publish never"
   },
   "devDependencies": {
     "electron": "33.4.11",
@@ -18,7 +19,7 @@
   "build": {
     "appId": "com.highlineproperties.plandesk",
     "productName": "PlanDesk",
-    "copyright": "\u00a9 2026 Highline Properties LLC",
+    "copyright": "© 2026 Highline Properties LLC",
     "files": [
       "main.js",
       "preload.js",

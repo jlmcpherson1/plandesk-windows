@@ -1,0 +1,27 @@
+# Builds the Microsoft Store package (PlanDesk-Store-<version>.appx) and attaches it to the run as an
+# artifact. Upload that file in Partner Center > PlanDesk > Packages. Run it from Actions > Build for the
+# Microsoft Store > Run workflow, pasting the three values from Partner Center > Product identity.
+name: Build for the Microsoft Store
+on:
+  workflow_dispatch:
+    inputs:
+      identity_name: { description: "Package/Identity/Name", required: true }
+      publisher: { description: "Package/Identity/Publisher (CN=...)", required: true }
+      publisher_name: { description: "Package/Properties/PublisherDisplayName", required: true, default: "Highline Properties LLC" }
+      version: { description: "Version (x.y.z, the Store adds .0)", required: true, default: "1.0.0" }
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: npm version "${{ inputs.version }}" --no-git-tag-version --allow-same-version
+      - run: npm run store
+        env:
+          STORE_IDENTITY_NAME: ${{ inputs.identity_name }}
+          STORE_PUBLISHER: ${{ inputs.publisher }}
+          STORE_PUBLISHER_NAME: ${{ inputs.publisher_name }}
+      - uses: actions/upload-artifact@v4
+        with: { name: PlanDesk-Store, path: "dist/*.appx", if-no-files-found: error }

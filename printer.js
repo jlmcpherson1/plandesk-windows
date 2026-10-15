@@ -6,7 +6,9 @@ const path = require("path");
 const fs = require("fs");
 
 const NAME = "PlanDesk";
-const DIR = path.join(process.env.LOCALAPPDATA || app.getPath("userData"), "PlanDesk", "print");
+// The Store copy runs packaged, where Windows gives the app a private view of AppData that the print spooler
+// can't see, so it uses a hidden folder in Documents instead.
+const DIR = process.windowsStore ? path.join(app.getPath("documents"), "PlanDesk Prints", ".incoming") : path.join(process.env.LOCALAPPDATA || app.getPath("userData"), "PlanDesk", "print");
 const FILE = path.join(DIR, "PlanDesk-print.pdf");
 
 const ps = (cmd, timeout = 20000) => new Promise(res => execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", cmd], { windowsHide: true, timeout }, (err, out) => res(err ? "" : String(out || "").trim())));
@@ -32,6 +34,7 @@ try {
 // Adds the printer. Windows shows one "allow changes" prompt. Resolves "ok" or a reason it didn't work.
 async function install() {
   fs.mkdirSync(DIR, { recursive: true });
+  if (process.windowsStore) return installEncoded();
   const dir = app.getPath("userData"), script = path.join(dir, "PrinterSetup.ps1"), result = path.join(dir, "printer-setup.txt");
   fs.writeFileSync(script, "﻿" + SETUP, "utf8");
   try { fs.unlinkSync(result); } catch (e) {}
@@ -39,6 +42,17 @@ async function install() {
   await ps(`try { Start-Process -FilePath powershell.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '${args.replace(/'/g, "''")}' } catch { 'declined' }`, 180000);
   let r = ""; try { r = fs.readFileSync(result, "utf8").trim(); } catch (e) { return "Windows permission was declined, so the printer wasn't added."; }
   return r === "ok" && (await ours()) ? "ok" : r.replace(/^ERROR:\s*/, "") || "The printer couldn't be added.";
+}
+
+// Store copy: the elevated PowerShell can't see files in the app's private AppData, so the script is passed
+// inline and success is checked by asking Windows for the printer afterwards.
+async function installEncoded() {
+  try { require("child_process").execFileSync("attrib", ["+h", DIR], { windowsHide: true }); } catch (e) {}
+  const body = SETUP.replace(/^param\(\[string\]\$Port\)\r?\n/, "$Port = '" + FILE.replace(/'/g, "''") + "'\n").replace(/^\$log = .*\r?\n/m, "$log = $null\n").replace(/\| Set-Content -LiteralPath \$log/g, "| Out-Null");
+  const enc = Buffer.from(body, "utf16le").toString("base64");
+  const r = await ps(`try { Start-Process -FilePath powershell.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -EncodedCommand ${enc}'; 'ran' } catch { 'declined' }`, 180000);
+  if (r === "declined") return "Windows permission was declined, so the printer wasn't added.";
+  return (await ours()) ? "ok" : "The printer couldn't be added. Try again, or restart the computer and try once more.";
 }
 
 // Watches for printouts and hands each one to open(fullPath).

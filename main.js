@@ -7,7 +7,10 @@ const path = require("path");
 const fs = require("fs");
 const printer = require("./printer");
 
-const START_URL = process.env.PLANDESK_URL || "https://highlinepropertiesnc.com/desk/";
+// The Microsoft Store copy (MSIX) is for the public: it signs in by emailed code at /app/ and is billed through
+// Stripe. The direct-download copy keeps the early-access /desk/ until billing is live.
+const STORE = !!process.windowsStore;
+const START_URL = process.env.PLANDESK_URL || (STORE ? "https://highlinepropertiesnc.com/app/" : "https://highlinepropertiesnc.com/desk/");
 const SITE = new URL(START_URL).origin;
 const ALLOWED_IN_WINDOW = [SITE, "https://damp-glade-9c00.cloudflareaccess.com"];
 const isFile = a => typeof a === "string" && /\.(pdf|fdf)$/i.test(a) && !a.startsWith("-");
@@ -80,7 +83,8 @@ async function startPrinter() {
   if (!(await printer.ours())) return;
   printerOn = true;
   printer.watch(sendFile);
-  app.setLoginItemSettings({ openAtLogin: true, args: ["--background"] });
+  // Store apps can't add themselves to sign-in this way; there, printouts made while PlanDesk is closed open next time it starts.
+  if (!STORE) app.setLoginItemSettings({ openAtLogin: true, args: ["--background"] });
 }
 async function setupPrinter(fromMenu) {
   if (process.platform !== "win32") return "PlanDesk's printer is for Windows.";
@@ -103,7 +107,7 @@ async function offerPrinter() {
 // Updates to this window and installer download in the background and install the next time PlanDesk closes.
 // (PlanDesk itself loads from the website, so its features update on their own.)
 function startUpdater() {
-  if (!app.isPackaged) return;
+  if (!app.isPackaged || STORE) return; // the Microsoft Store updates its own copy
   try {
     const { autoUpdater } = require("electron-updater");
     autoUpdater.autoInstallOnAppQuit = true;
@@ -139,5 +143,5 @@ else {
   });
   app.on("before-quit", () => { quitting = true; });
   // With the printer on, closing the window keeps PlanDesk running quietly so printouts still open.
-  app.on("window-all-closed", () => { if (!printerOn) app.quit(); });
+  app.on("window-all-closed", () => { if (!printerOn || STORE) app.quit(); });
 }
