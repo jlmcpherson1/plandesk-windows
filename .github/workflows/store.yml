@@ -30,6 +30,9 @@ jobs:
           $z = [IO.Compression.ZipFile]::OpenRead((Get-ChildItem dist\*.appx)[0].FullName)
           $z.Entries | Where-Object { $_.FullName -like "assets/*" } | ForEach-Object { $_.FullName }
           $e = $z.Entries | Where-Object { $_.FullName -eq "AppxManifest.xml" }
-          (New-Object IO.StreamReader($e.Open())).ReadToEnd()
+          $m = (New-Object IO.StreamReader($e.Open())).ReadToEnd()
+          $a = ($z.Entries | Where-Object { $_.FullName -like "assets/*" } | ForEach-Object { $_.FullName }) -join ", "
+          Write-Output ("::notice title=Package assets::" + $a)
+          Write-Output ("::notice title=AppxManifest::" + ($m -replace "%","%25" -replace "`r","" -replace "`n","%0A"))
       - uses: actions/upload-artifact@v4
         with: { name: PlanDesk-Store, path: "dist/*.appx", if-no-files-found: error }
