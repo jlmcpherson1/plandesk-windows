@@ -21,5 +21,7 @@ module.exports = {
     showNameOnTiles: true,
     languages: ["en-US"],
     addAutoLaunchExtension: false,
+    minVersion: "10.0.17763.0",
+    maxVersionTested: "10.0.26100.0",
   },
 };
