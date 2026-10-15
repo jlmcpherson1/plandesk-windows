@@ -58,9 +58,20 @@ function sendFile(full) {
     const msg = { name, path: full, data: buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) };
     createWindow();
     if (rendererReady) win.webContents.send("open-file", msg); else queue.push(msg);
-  } catch (e) { dialog.showErrorBox("PlanDesk", "PlanDesk couldn't open " + full + "\n\n" + e.message); }
+  } catch (e) { logLine("open failed " + full + ": " + e.message); dialog.showErrorBox("PlanDesk", "PlanDesk couldn't open " + full + "\n\n" + e.message); }
 }
-const filesIn = argv => argv.slice(1).filter(isFile).map(a => path.resolve(a)).filter(a => fs.existsSync(a));
+// Any argument that is an existing file (Outlook can pass short 8.3 names or odd quoting).
+const filesIn = argv => {
+  const out = [];
+  for (let a of argv.slice(1)) {
+    if (typeof a !== "string" || !a || a.startsWith("-")) continue;
+    a = a.replace(/^"+|"+$/g, "").trim();
+    if (!isFile(a)) continue;
+    try { const full = path.resolve(a); if (fs.statSync(full).isFile()) out.push(fs.realpathSync.native ? fs.realpathSync.native(full) : full); } catch (e) {}
+  }
+  return out;
+};
+const logLine = m => { try { const f = data("debug.log"); if (fs.existsSync(f) && fs.statSync(f).size > 200000) fs.unlinkSync(f); fs.appendFileSync(f, new Date().toISOString() + "  " + m + "\n"); } catch (e) {} };
 
 // The printer: offered once on first run, and any time from Help > Set up the PlanDesk printer.
 let printerOn = false;
@@ -103,17 +114,17 @@ function startUpdater() {
 
 if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
-  app.on("second-instance", (_e, argv) => { const f = filesIn(argv); if (f.length) f.forEach(sendFile); else if (!argv.includes("--background")) createWindow(); });
+  app.on("second-instance", (_e, argv) => { const f = filesIn(argv); logLine("second-instance " + JSON.stringify(argv) + " -> " + JSON.stringify(f)); if (f.length) f.forEach(sendFile); else if (!argv.includes("--background")) createWindow(); });
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
     session.fromPartition("persist:plandesk").setPermissionRequestHandler((_wc, perm, cb) => cb(["clipboard-read", "clipboard-sanitized-write", "fileSystem", "notifications", "fullscreen"].includes(perm)));
-    const files = filesIn(process.argv);
+    const files = filesIn(process.argv); logLine("start " + JSON.stringify(process.argv) + " -> " + JSON.stringify(files));
     if (!BACKGROUND || files.length) createWindow();
     files.forEach(sendFile);
     startPrinter();
     startUpdater();
   });
-  ipcMain.on("renderer-ready", () => { rendererReady = true; while (queue.length && win) win.webContents.send("open-file", queue.shift()); });
+  ipcMain.on("renderer-ready", () => { logLine("renderer ready, sending " + queue.length); rendererReady = true; while (queue.length && win) win.webContents.send("open-file", queue.shift()); });
   ipcMain.handle("reveal", (_e, name) => {
     const full = known[String(name || "").toLowerCase()];
     if (full && fs.existsSync(full)) { shell.showItemInFolder(full); return true; }
