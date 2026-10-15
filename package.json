@@ -8,15 +8,39 @@
   "main": "main.js",
   "license": "UNLICENSED",
   "private": true,
-  "scripts": { "dist": "electron-builder --win --x64 --publish never" },
-  "devDependencies": { "electron": "33.4.11", "electron-builder": "25.1.8" },
+  "scripts": {
+    "dist": "electron-builder --win --x64 --publish always"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8"
+  },
   "build": {
     "appId": "com.highlineproperties.plandesk",
     "productName": "PlanDesk",
-    "copyright": "© 2026 Highline Properties LLC",
-    "files": ["main.js", "preload.js", "build/icon.ico"],
-    "directories": { "buildResources": "build", "output": "dist" },
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.ico", "artifactName": "PlanDesk-Setup.exe" },
+    "copyright": "\u00a9 2026 Highline Properties LLC",
+    "files": [
+      "main.js",
+      "preload.js",
+      "printer.js",
+      "build/icon.ico"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "PlanDesk-Setup.exe"
+    },
     "nsis": {
       "oneClick": true,
       "perMachine": false,
@@ -29,8 +53,31 @@
       "uninstallerIcon": "build/icon.ico"
     },
     "fileAssociations": [
-      { "ext": "pdf", "name": "PDF document", "description": "PDF document", "icon": "build/pdf.ico", "role": "Editor" },
-      { "ext": "fdf", "name": "PlanDesk markup file", "description": "Markup file (FDF)", "icon": "build/fdf.ico", "role": "Editor" }
+      {
+        "ext": "pdf",
+        "name": "PDF document",
+        "description": "PDF document",
+        "icon": "build/pdf.ico",
+        "role": "Editor"
+      },
+      {
+        "ext": "fdf",
+        "name": "PlanDesk markup file",
+        "description": "Markup file (FDF)",
+        "icon": "build/fdf.ico",
+        "role": "Editor"
+      }
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "jlmcpherson1",
+        "repo": "plandesk-windows",
+        "releaseType": "release"
+      }
     ]
+  },
+  "dependencies": {
+    "electron-updater": "6.3.9"
   }
 }
