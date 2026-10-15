@@ -50,30 +50,29 @@
       "shortcutName": "PlanDesk",
       "deleteAppDataOnUninstall": false,
       "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico"
+      "uninstallerIcon": "build/icon.ico",
+      "include": "build/installer.nsh"
     },
-    "fileAssociations": [
-      {
-        "ext": "pdf",
-        "name": "PDF document",
-        "description": "PDF document",
-        "icon": "build/pdf.ico",
-        "role": "Editor"
-      },
-      {
-        "ext": "fdf",
-        "name": "PlanDesk markup file",
-        "description": "Markup file (FDF)",
-        "icon": "build/fdf.ico",
-        "role": "Editor"
-      }
-    ],
     "publish": [
       {
         "provider": "github",
         "owner": "jlmcpherson1",
         "repo": "plandesk-windows",
         "releaseType": "release"
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "build/open-file.ps1",
+        "to": "open-file.ps1"
+      },
+      {
+        "from": "build/pdf.ico",
+        "to": "pdf.ico"
+      },
+      {
+        "from": "build/fdf.ico",
+        "to": "fdf.ico"
       }
     ]
   },
