@@ -1,0 +1,25 @@
+# Builds PlanDesk-Setup.exe on Windows and publishes it as the latest release.
+# Download link: https://github.com/jlmcpherson1/plandesk-windows/releases/latest/download/PlanDesk-Setup.exe
+name: Build PlanDesk for Windows
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: npm run dist
+      - name: Publish release
+        shell: bash
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          v=$(node -p "require('./package.json').version")
+          tag="v$v-${{ github.run_number }}"
+          gh release create "$tag" dist/PlanDesk-Setup.exe --title "PlanDesk for Windows $v (build ${{ github.run_number }})" --notes "Download PlanDesk-Setup.exe and run it." --latest

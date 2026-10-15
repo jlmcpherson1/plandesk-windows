@@ -1,0 +1,36 @@
+{
+  "name": "plandesk",
+  "productName": "PlanDesk",
+  "version": "1.0.0",
+  "description": "PlanDesk: PDF markup and takeoff for construction drawings",
+  "author": "Highline Properties LLC",
+  "homepage": "https://highlinepropertiesnc.com/plandesk/",
+  "main": "main.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": { "dist": "electron-builder --win --x64 --publish never" },
+  "devDependencies": { "electron": "33.4.11", "electron-builder": "25.1.8" },
+  "build": {
+    "appId": "com.highlineproperties.plandesk",
+    "productName": "PlanDesk",
+    "copyright": "© 2026 Highline Properties LLC",
+    "files": ["main.js", "preload.js", "build/icon.ico"],
+    "directories": { "buildResources": "build", "output": "dist" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "icon": "build/icon.ico", "artifactName": "PlanDesk-Setup.exe" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "PlanDesk",
+      "deleteAppDataOnUninstall": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "fileAssociations": [
+      { "ext": "pdf", "name": "PDF document", "description": "PDF document", "icon": "build/pdf.ico", "role": "Editor" },
+      { "ext": "fdf", "name": "PlanDesk markup file", "description": "Markup file (FDF)", "icon": "build/fdf.ico", "role": "Editor" }
+    ]
+  }
+}
