@@ -131,6 +131,12 @@ else {
     return false;
   });
   ipcMain.handle("setup-printer", () => setupPrinter(true));
+  // Save back to a file PlanDesk opened (only paths it was handed by Windows, never arbitrary ones).
+  ipcMain.handle("save-file", (_e, full, buf) => {
+    if (typeof full !== "string" || !Object.values(known).some(k => k.toLowerCase() === full.toLowerCase())) return { ok: false, error: "PlanDesk didn't open that file." };
+    try { const tmp = full + ".plandesk-saving"; fs.writeFileSync(tmp, Buffer.from(buf)); fs.renameSync(tmp, full); return { ok: true }; }
+    catch (e) { try { fs.unlinkSync(full + ".plandesk-saving"); } catch (e2) {} return { ok: false, busy: /EBUSY|EPERM|EACCES/.test(e.code || ""), error: e.message }; }
+  });
   app.on("before-quit", () => { quitting = true; });
   // With the printer on, closing the window keeps PlanDesk running quietly so printouts still open.
   app.on("window-all-closed", () => { if (!printerOn) app.quit(); });

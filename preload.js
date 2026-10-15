@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld("pdDesktop", {
   onOpenFile(cb) { handler = cb; while (waiting.length) cb(waiting.shift()); ipcRenderer.send("renderer-ready"); },
   reveal: name => ipcRenderer.invoke("reveal", name),
   setupPrinter: () => ipcRenderer.invoke("setup-printer"),
+  saveFile: (path, data) => ipcRenderer.invoke("save-file", path, data),
 });
