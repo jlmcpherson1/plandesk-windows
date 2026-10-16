@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld("pdDesktop", {
   reveal: name => ipcRenderer.invoke("reveal", name),
   setupPrinter: () => ipcRenderer.invoke("setup-printer"),
   saveFile: (path, data) => ipcRenderer.invoke("save-file", path, data),
+  htmlToPdf: (html, opts) => ipcRenderer.invoke("html-to-pdf", html, opts), // Word and Excel files laid out by the page, printed to a text PDF
 });

@@ -13,7 +13,7 @@ const STORE = !!process.windowsStore;
 const START_URL = process.env.PLANDESK_URL || (STORE ? "https://highlinepropertiesnc.com/app/" : "https://highlinepropertiesnc.com/desk/");
 const SITE = new URL(START_URL).origin;
 const ALLOWED_IN_WINDOW = [SITE, "https://damp-glade-9c00.cloudflareaccess.com"];
-const isFile = a => typeof a === "string" && /\.(pdf|fdf)$/i.test(a) && !a.startsWith("-");
+const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|xlsx|xlsm|xls|csv)$/i.test(a) && !a.startsWith("-"); // Word/Excel via "Open with"; converted to PDF in the page
 const BACKGROUND = process.argv.includes("--background"); // started at Windows sign-in to run the printer
 
 let win = null, rendererReady = false, quitting = false;
@@ -140,6 +140,22 @@ else {
     if (typeof full !== "string" || !Object.values(known).some(k => k.toLowerCase() === full.toLowerCase())) return { ok: false, error: "PlanDesk didn't open that file." };
     try { const tmp = full + ".plandesk-saving"; fs.writeFileSync(tmp, Buffer.from(buf)); fs.renameSync(tmp, full); return { ok: true }; }
     catch (e) { try { fs.unlinkSync(full + ".plandesk-saving"); } catch (e2) {} return { ok: false, busy: /EBUSY|EPERM|EACCES/.test(e.code || ""), error: e.message }; }
+  });
+  // Word and Excel files: the page lays the document out as HTML; a hidden window prints it to a PDF with real text.
+  // Scripts are off and nothing loads from the network in that window; the temp file is removed right after.
+  ipcMain.handle("html-to-pdf", async (_e, html, opts) => {
+    if (typeof html !== "string" || !html.length || html.length > 300e6) return { ok: false, error: "Nothing to print." };
+    const tmp = path.join(app.getPath("temp"), "plandesk-office-" + process.pid + "-" + Date.now() + ".html");
+    let w = null;
+    try {
+      fs.writeFileSync(tmp, html);
+      w = new BrowserWindow({ show: false, webPreferences: { javascript: false, sandbox: true, partition: "plandesk-office" } });
+      w.webContents.session.webRequest.onBeforeRequest((d, cb) => cb({ cancel: !/^(file|data|blob):/i.test(d.url) }));
+      await w.loadFile(tmp);
+      const pdf = await w.webContents.printToPDF({ preferCSSPageSize: true, printBackground: true, landscape: !!(opts && opts.landscape) });
+      return { ok: true, data: pdf };
+    } catch (e) { return { ok: false, error: e.message }; }
+    finally { if (w) w.destroy(); try { fs.unlinkSync(tmp); } catch (e) {} }
   });
   app.on("before-quit", () => { quitting = true; });
   // With the printer on, closing the window keeps PlanDesk running quietly so printouts still open.
