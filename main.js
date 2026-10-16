@@ -121,7 +121,7 @@ else {
   app.on("second-instance", (_e, argv) => { const f = filesIn(argv); logLine("second-instance " + JSON.stringify(argv) + " -> " + JSON.stringify(f)); if (f.length) f.forEach(sendFile); else if (!argv.includes("--background")) createWindow(); });
   app.whenReady().then(async () => {
     Menu.setApplicationMenu(null);
-    session.fromPartition("persist:plandesk").setPermissionRequestHandler((_wc, perm, cb) => cb(["clipboard-read", "clipboard-sanitized-write", "fileSystem", "notifications", "fullscreen"].includes(perm)));
+    session.fromPartition("persist:plandesk").setPermissionRequestHandler((_wc, perm, cb, d) => cb(["clipboard-read", "clipboard-sanitized-write", "fileSystem", "notifications", "fullscreen"].includes(perm) || (perm === "media" && d && (d.mediaTypes || []).every(t => t === "audio")))); // audio only: voice notes
     const files = filesIn(process.argv); logLine("start " + JSON.stringify(process.argv) + " -> " + JSON.stringify(files));
     if (!BACKGROUND || files.length) createWindow();
     files.forEach(sendFile);

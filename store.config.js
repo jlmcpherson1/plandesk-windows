@@ -11,6 +11,8 @@ module.exports = {
     { ext: "pdf", name: "PDF document", description: "PDF document", icon: "build/pdf.ico" },
     { ext: "fdf", name: "Markup file", description: "Markup file (FDF)", icon: "build/fdf.ico" },
   ],
+  // Voice notes on markups need the microphone; the stock template only declares runFullTrust.
+  appxManifestCreated: file => { const fs = require("fs"); const x = fs.readFileSync(file, "utf8"); if (!x.includes('Name="microphone"')) fs.writeFileSync(file, x.replace('<rescap:Capability Name="runFullTrust"/>', '<rescap:Capability Name="runFullTrust"/>\n    <DeviceCapability Name="microphone"/>')); },
   appx: {
     applicationId: "PlanDesk",
     identityName: env.STORE_IDENTITY_NAME || "HighlineProperties.PlanDesk",
