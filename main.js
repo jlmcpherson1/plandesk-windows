@@ -7,10 +7,10 @@ const path = require("path");
 const fs = require("fs");
 const printer = require("./printer");
 
-// The Microsoft Store copy (MSIX) is for the public: it signs in by emailed code at /app/ and is billed through
-// Stripe. The direct-download copy keeps the early-access /desk/ until billing is live.
+// Both copies (Microsoft Store MSIX and the direct download from getplandesk.com/windows) open /app/: sign in by emailed
+// code, 7-day trial, billed through Stripe. Testers on the server's COMP_EMAILS list get Pro without paying.
 const STORE = !!process.windowsStore;
-const START_URL = process.env.PLANDESK_URL || (STORE ? "https://highlinepropertiesnc.com/app/" : "https://highlinepropertiesnc.com/desk/");
+const START_URL = process.env.PLANDESK_URL || "https://highlinepropertiesnc.com/app/";
 const SITE = new URL(START_URL).origin;
 const ALLOWED_IN_WINDOW = [SITE, "https://damp-glade-9c00.cloudflareaccess.com"];
 const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|xlsx|xlsm|xls|csv)$/i.test(a) && !a.startsWith("-"); // Word/Excel via "Open with"; converted to PDF in the page

@@ -1,7 +1,7 @@
 {
   "name": "plandesk",
   "productName": "PlanDesk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PlanDesk: PDF markup and takeoff for construction drawings",
   "author": "Highline Properties LLC",
   "homepage": "https://highlinepropertiesnc.com/plandesk/",
@@ -19,7 +19,7 @@
   "build": {
     "appId": "com.highlineproperties.plandesk",
     "productName": "PlanDesk",
-    "copyright": "© 2026 Highline Properties LLC",
+    "copyright": "\u00a9 2026 Highline Properties LLC",
     "files": [
       "main.js",
       "preload.js",
