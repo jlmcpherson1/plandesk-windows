@@ -17,6 +17,7 @@ const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|xlsx|xlsm|xls|csv)
 const BACKGROUND = process.argv.includes("--background"); // started at Windows sign-in to run the printer
 
 let win = null, rendererReady = false, quitting = false;
+const TITLE_H = 40; // must match the page's top bar height in the desktop app (html.wco .top)
 const queue = [];
 const data = n => path.join(app.getPath("userData"), n);
 const readJson = (f, d) => { try { return JSON.parse(fs.readFileSync(data(f), "utf8")); } catch (e) { return d; } };
@@ -30,10 +31,16 @@ function createWindow() {
   rendererReady = false;
   win = new BrowserWindow({
     width: 1440, height: 900, show: false, title: "PlanDesk", backgroundColor: "#13171b", icon: path.join(__dirname, "build", "icon.ico"),
+    // No separate Windows title strip: PlanDesk's own top bar (logo, menus, file name) is the title bar, with
+    // Windows' minimize/maximize/close drawn over its right end. The page colors them to match its theme.
+    titleBarStyle: "hidden", titleBarOverlay: { color: "#13171b", symbolColor: "#ecebe7", height: TITLE_H },
     webPreferences: { preload: path.join(__dirname, "preload.js"), partition: "persist:plandesk", contextIsolation: true, sandbox: false, spellcheck: false },
   });
   win.once("ready-to-show", () => { win.maximize(); win.show(); setTimeout(offerPrinter, 4000); });
   win.on("closed", () => { win = null; rendererReady = false; });
+  // F11 full screen hides Windows' buttons; the page drops the space it keeps for them.
+  win.on("enter-full-screen", () => win.webContents.send("full-screen", true));
+  win.on("leave-full-screen", () => win.webContents.send("full-screen", false));
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:/i.test(url)) shell.openExternal(url); return { action: "deny" }; });
   win.webContents.on("will-navigate", (e, url) => {
     if (ALLOWED_IN_WINDOW.some(o => url.startsWith(o))) return;
@@ -42,7 +49,7 @@ function createWindow() {
   win.webContents.on("did-start-navigation", (_e, _url, inPage, isMain) => { if (isMain && !inPage) rendererReady = false; });
   win.webContents.on("did-fail-load", (_e, code, _desc, _url, isMain) => {
     if (!isMain || code === -3) return;
-    win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(`<body style="font:16px Segoe UI,sans-serif;background:#13171b;color:#ecebe7;display:grid;place-items:center;height:100vh;margin:0"><div style="max-width:460px;text-align:center"><h2>PlanDesk can't connect</h2><p style="color:#a9b0b6">The first time you open PlanDesk it needs the internet to sign in. Check your connection and try again.</p><button onclick="location.href='${START_URL}'" style="font:600 15px Segoe UI;padding:10px 22px;border-radius:8px;border:0;background:#f2a541;color:#141a1f;cursor:pointer">Try again</button></div></body>`));
+    win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(`<body style="font:16px Segoe UI,sans-serif;background:#13171b;color:#ecebe7;display:grid;place-items:center;height:100vh;margin:0"><div style="position:fixed;top:0;left:0;right:0;height:40px;-webkit-app-region:drag"></div><div style="max-width:460px;text-align:center"><h2>PlanDesk can't connect</h2><p style="color:#a9b0b6">The first time you open PlanDesk it needs the internet to sign in. Check your connection and try again.</p><button onclick="location.href='${START_URL}'" style="font:600 15px Segoe UI;padding:10px 22px;border-radius:8px;border:0;background:#f2a541;color:#141a1f;cursor:pointer">Try again</button></div></body>`));
   });
   win.webContents.on("before-input-event", (e, i) => {
     if (i.type !== "keyDown") return;
@@ -129,6 +136,9 @@ else {
     startUpdater();
   });
   ipcMain.on("renderer-ready", () => { logLine("renderer ready, sending " + queue.length); rendererReady = true; while (queue.length && win) win.webContents.send("open-file", queue.shift()); });
+  ipcMain.on("title-bar", (e, c) => {
+    try { const w = BrowserWindow.fromWebContents(e.sender); if (w && c && /^#[0-9a-f]{3,8}$/i.test(c.color) && /^#[0-9a-f]{3,8}$/i.test(c.symbol)) w.setTitleBarOverlay({ color: c.color, symbolColor: c.symbol, height: TITLE_H }); } catch (err) {}
+  });
   ipcMain.handle("reveal", (_e, name) => {
     const full = known[String(name || "").toLowerCase()];
     if (full && fs.existsSync(full)) { shell.showItemInFolder(full); return true; }
