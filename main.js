@@ -14,7 +14,8 @@ const START_URL = process.env.PLANDESK_URL || "https://highlinepropertiesnc.com/
 const SITE = new URL(START_URL).origin;
 const ALLOWED_IN_WINDOW = [SITE, "https://damp-glade-9c00.cloudflareaccess.com"];
 const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|xlsx|xlsm|xls|csv)$/i.test(a) && !a.startsWith("-"); // Word/Excel via "Open with"; converted to PDF in the page
-const BACKGROUND = process.argv.includes("--background"); // started at Windows sign-in to run the printer
+// Started at Windows sign-in to run the printer, or restarted by a background update: no window either way.
+const BACKGROUND = process.argv.includes("--background") || process.argv.includes("--updated");
 
 let win = null, rendererReady = false, quitting = false;
 const TITLE_H = 40; // must match the page's top bar height in the desktop app (html.wco .top)
@@ -37,7 +38,8 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, "preload.js"), partition: "persist:plandesk", contextIsolation: true, sandbox: false, spellcheck: false },
   });
   win.once("ready-to-show", () => { win.maximize(); win.show(); setTimeout(offerPrinter, 4000); });
-  win.on("closed", () => { win = null; rendererReady = false; });
+  win.on("closed", () => { win = null; rendererReady = false; setTimeout(installUpdateIfIdle, 500); });
+  checkForUpdate();
   // F11 full screen hides Windows' buttons; the page drops the space it keeps for them.
   win.on("enter-full-screen", () => win.webContents.send("full-screen", true));
   win.on("leave-full-screen", () => win.webContents.send("full-screen", false));
@@ -113,13 +115,24 @@ async function offerPrinter() {
 
 // Updates to this window and installer download in the background and install the next time PlanDesk closes.
 // (PlanDesk itself loads from the website, so its features update on their own.)
+// Updates: the printer keeps PlanDesk running after its window closes, so "install on quit" alone never happens.
+// Instead a downloaded update installs as soon as no window is open (right away in the background, or when you
+// close the window), silently, and PlanDesk restarts in the background with --updated.
+let updater = null, updateReady = false;
+function installUpdateIfIdle() {
+  if (!updateReady || !updater || (win && !win.isDestroyed())) return;
+  logLine("installing update"); quitting = true;
+  try { updater.quitAndInstall(true, true); } catch (e) { logLine("install failed " + e.message); }
+}
+function checkForUpdate() { if (updater && !updateReady) updater.checkForUpdates().catch(e => logLine("update check " + (e && e.message))); }
 function startUpdater() {
   if (!app.isPackaged || STORE) return; // the Microsoft Store updates its own copy
   try {
-    const { autoUpdater } = require("electron-updater");
-    autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.checkForUpdates().catch(() => {});
-    setInterval(() => autoUpdater.checkForUpdates().catch(() => {}), 6 * 3600 * 1000);
+    updater = require("electron-updater").autoUpdater;
+    updater.autoInstallOnAppQuit = true;
+    updater.on("update-downloaded", i => { logLine("update downloaded " + (i && i.version)); updateReady = true; installUpdateIfIdle(); });
+    checkForUpdate();
+    setInterval(checkForUpdate, 3600 * 1000);
   } catch (e) {}
 }
 
@@ -132,7 +145,7 @@ else {
     const files = filesIn(process.argv); logLine("start " + JSON.stringify(process.argv) + " -> " + JSON.stringify(files));
     if (!BACKGROUND || files.length) createWindow();
     files.forEach(sendFile);
-    startPrinter();
+    startPrinter().then(() => { if (BACKGROUND && !printerOn && !win) app.quit(); }); // nothing to do in the background without the printer
     startUpdater();
   });
   ipcMain.on("renderer-ready", () => { logLine("renderer ready, sending " + queue.length); rendererReady = true; while (queue.length && win) win.webContents.send("open-file", queue.shift()); });
