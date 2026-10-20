@@ -53,6 +53,14 @@ function createWindow() {
     if (!isMain || code === -3) return;
     win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(`<body style="font:16px Segoe UI,sans-serif;background:#13171b;color:#ecebe7;display:grid;place-items:center;height:100vh;margin:0"><div style="position:fixed;top:0;left:0;right:0;height:40px;-webkit-app-region:drag"></div><div style="max-width:460px;text-align:center"><h2>PlanDesk can't connect</h2><p style="color:#a9b0b6">The first time you open PlanDesk it needs the internet to sign in. Check your connection and try again.</p><button onclick="location.href='${START_URL}'" style="font:600 15px Segoe UI;padding:10px 22px;border-radius:8px;border:0;background:#f2a541;color:#141a1f;cursor:pointer">Try again</button></div></body>`));
   });
+  win.setMenuBarVisibility(false);
+  // Right-click in a text box (or on selected text): Cut, Copy, Paste, Select all, like any Windows app.
+  win.webContents.on("context-menu", (_e, p) => {
+    const f = p.editFlags || {}, items = [];
+    if (p.isEditable) items.push({ role: "undo", enabled: f.canUndo }, { role: "redo", enabled: f.canRedo }, { type: "separator" }, { role: "cut", enabled: f.canCut }, { role: "copy", enabled: f.canCopy }, { role: "paste", enabled: f.canPaste }, { type: "separator" }, { role: "selectAll", enabled: f.canSelectAll });
+    else if (p.selectionText && p.selectionText.trim()) items.push({ role: "copy" });
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
+  });
   win.webContents.on("before-input-event", (e, i) => {
     if (i.type !== "keyDown") return;
     if (i.key === "F5" || (i.control && i.key.toLowerCase() === "r")) { e.preventDefault(); win.webContents.reload(); }
@@ -140,7 +148,9 @@ if (!app.requestSingleInstanceLock()) { app.quit(); }
 else {
   app.on("second-instance", (_e, argv) => { const f = filesIn(argv); logLine("second-instance " + JSON.stringify(argv) + " -> " + JSON.stringify(f)); if (f.length) f.forEach(sendFile); else if (!argv.includes("--background")) createWindow(); });
   app.whenReady().then(async () => {
-    Menu.setApplicationMenu(null);
+    // No visible menu bar (PlanDesk draws its own), but a hidden Edit menu keeps Ctrl+X/C/V/A and undo working in
+    // every text box. Menu.setApplicationMenu(null) dropped those shortcuts.
+    Menu.setApplicationMenu(Menu.buildFromTemplate([{ label: "Edit", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "pasteAndMatchStyle", visible: false }, { role: "selectAll" }] }]));
     session.fromPartition("persist:plandesk").setPermissionRequestHandler((_wc, perm, cb, d) => cb(["clipboard-read", "clipboard-sanitized-write", "fileSystem", "notifications", "fullscreen"].includes(perm) || (perm === "media" && d && (d.mediaTypes || []).every(t => t === "audio")))); // audio only: voice notes
     const files = filesIn(process.argv); logLine("start " + JSON.stringify(process.argv) + " -> " + JSON.stringify(files));
     if (!BACKGROUND || files.length) createWindow();
