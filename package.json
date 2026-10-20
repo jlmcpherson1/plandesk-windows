@@ -74,6 +74,10 @@
       {
         "from": "build/fdf.ico",
         "to": "fdf.ico"
+      },
+      {
+        "from": "build/dxf.ico",
+        "to": "dxf.ico"
       }
     ]
   },

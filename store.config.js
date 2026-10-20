@@ -10,6 +10,8 @@ module.exports = {
   fileAssociations: [
     { ext: "pdf", name: "PDF document", description: "PDF document", icon: "build/pdf.ico" },
     { ext: "fdf", name: "Markup file", description: "Markup file (FDF)", icon: "build/fdf.ico" },
+    { ext: "dxf", name: "AutoCAD drawing", description: "AutoCAD drawing (DXF)", icon: "build/dxf.ico" },
+    { ext: ["jpg", "jpeg", "png", "tif", "tiff", "heic", "gif", "bmp", "webp"], name: "Picture", description: "Picture", icon: "build/pdf.ico" },
   ],
   // Voice notes on markups need the microphone; the stock template only declares runFullTrust.
   appxManifestCreated: file => { const fs = require("fs"); const x = fs.readFileSync(file, "utf8"); if (!x.includes('Name="microphone"')) fs.writeFileSync(file, x.replace('<rescap:Capability Name="runFullTrust"/>', '<rescap:Capability Name="runFullTrust"/>\n    <DeviceCapability Name="microphone"/>')); },

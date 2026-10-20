@@ -13,7 +13,7 @@ const STORE = !!process.windowsStore;
 const START_URL = process.env.PLANDESK_URL || "https://highlinepropertiesnc.com/app/";
 const SITE = new URL(START_URL).origin;
 const ALLOWED_IN_WINDOW = [SITE, "https://damp-glade-9c00.cloudflareaccess.com"];
-const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|xlsx|xlsm|xls|csv)$/i.test(a) && !a.startsWith("-"); // Word/Excel via "Open with"; converted to PDF in the page
+const isFile = a => typeof a === "string" && /\.(pdf|fdf|docx|docm|doc|rtf|xlsx|xlsm|xls|csv|dxf|dwg|jpe?g|jfif|png|gif|bmp|webp|heic|heif|tiff?)$/i.test(a) && !a.startsWith("-"); // Word, Excel, DXF and pictures via "Open with"; converted to PDF in the page
 // Started at Windows sign-in to run the printer, or restarted by a background update: no window either way.
 const BACKGROUND = process.argv.includes("--background") || process.argv.includes("--updated");
 
