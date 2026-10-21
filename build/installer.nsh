@@ -17,6 +17,43 @@
   WriteRegStr HKCU "Software\PlanDesk\Capabilities\FileAssociations" "${EXT}" "${PROGID}"
 !macroend
 
+; PlanDesk picked by browsing to PlanDesk.exe ("Choose an app on your PC"), or listed under its long program description:
+; send it through the opener too, so Outlook attachments (kept in a temporary folder) are copied out first, and call it PlanDesk.
+!macro pdAppKey
+  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe" "FriendlyAppName" "PlanDesk"
+  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\DefaultIcon" "" "$INSTDIR\PlanDesk.exe,0"
+  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\shell\open\command" "" '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
+  !insertmacro pdSupported ".pdf"
+  !insertmacro pdSupported ".fdf"
+  !insertmacro pdSupported ".dxf"
+  !insertmacro pdSupported ".dwg"
+  !insertmacro pdSupported ".jpg"
+  !insertmacro pdSupported ".jpeg"
+  !insertmacro pdSupported ".png"
+  !insertmacro pdSupported ".tif"
+  !insertmacro pdSupported ".tiff"
+  !insertmacro pdSupported ".gif"
+  !insertmacro pdSupported ".bmp"
+  !insertmacro pdSupported ".webp"
+  !insertmacro pdSupported ".heic"
+!macroend
+!macro pdSupported EXT
+  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\SupportedTypes" "${EXT}" ""
+!macroend
+
+; The PlanMark-era helper (Install-PlanMarkOpener.ps1) registered "PlanMark (opens Outlook attachments)" for PDF and FDF.
+; Where it's still someone's default, keep it working but route it through PlanDesk's opener and name it PlanDesk;
+; drop its separate entry from Default apps.
+!macro pdAdoptPlanMark PROGID DESC
+  ClearErrors
+  ReadRegStr $0 HKCU "Software\Classes\${PROGID}\shell\open\command" ""
+  IfErrors +5 0
+  WriteRegStr HKCU "Software\Classes\${PROGID}" "" "${DESC}"
+  WriteRegStr HKCU "Software\Classes\${PROGID}\shell\open\command" "" '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
+  WriteRegStr HKCU "Software\Classes\${PROGID}\Application" "ApplicationName" "PlanDesk"
+  WriteRegStr HKCU "Software\Classes\${PROGID}\DefaultIcon" "" "$INSTDIR\PlanDesk.exe,0"
+!macroend
+
 !macro customInstall
   WriteRegStr HKCU "Software\PlanDesk\Capabilities" "ApplicationName" "PlanDesk"
   WriteRegStr HKCU "Software\PlanDesk\Capabilities" "ApplicationDescription" "PDF markup and takeoff for construction drawings"
@@ -35,6 +72,10 @@
   !insertmacro pdOpenWith ".webp" "PlanDesk.Image"
   !insertmacro pdOpenWith ".heic" "PlanDesk.Image"
   WriteRegStr HKCU "Software\RegisteredApplications" "PlanDesk" "Software\PlanDesk\Capabilities"
+  !insertmacro pdAppKey
+  !insertmacro pdAdoptPlanMark "PlanMark.Opener.pdf" "PDF document"
+  !insertmacro pdAdoptPlanMark "PlanMark.Opener.fdf" "Markup file (FDF)"
+  DeleteRegValue HKCU "Software\RegisteredApplications" "PlanMark (opens Outlook attachments)"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
 
@@ -62,6 +103,7 @@
   DeleteRegValue HKCU "Software\Classes\.pdf\OpenWithProgids" "PlanDesk.Pdf"
   DeleteRegValue HKCU "Software\Classes\.fdf\OpenWithProgids" "PlanDesk.Fdf"
   DeleteRegValue HKCU "Software\RegisteredApplications" "PlanDesk"
+  DeleteRegKey HKCU "Software\Classes\Applications\PlanDesk.exe"
   DeleteRegKey HKCU "Software\PlanDesk"
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
 !macroend
