@@ -1,9 +1,11 @@
+; Every open command starts PowerShell through conhost --headless: Outlook (Office's attack-surface rules) silently
+; refuses to start powershell.exe itself for an attachment, which is why Outlook JPGs did nothing. PDFs already worked this way.
 ; PlanDesk's own file registration. PDFs, FDFs, DXFs and pictures open through build\open-file.ps1 (run by Windows' signed
 ; PowerShell), which Outlook will launch for attachments and which then hands the file to PlanDesk.exe.
 !macro pdRegister EXT PROGID DESC ICON
   WriteRegStr HKCU "Software\Classes\${PROGID}" "" "${DESC}"
   WriteRegStr HKCU "Software\Classes\${PROGID}\DefaultIcon" "" "$INSTDIR\resources\${ICON}"
-  WriteRegStr HKCU "Software\Classes\${PROGID}\shell\open\command" "" '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
+  WriteRegStr HKCU "Software\Classes\${PROGID}\shell\open\command" "" '"$SYSDIR\conhost.exe" --headless "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
   WriteRegStr HKCU "Software\Classes\${PROGID}\Application" "ApplicationName" "PlanDesk"
   WriteRegStr HKCU "Software\Classes\${PROGID}\Application" "ApplicationIcon" "$INSTDIR\PlanDesk.exe,0"
   WriteRegStr HKCU "Software\Classes\${PROGID}\Application" "ApplicationCompany" "Highline Properties LLC"
@@ -22,7 +24,7 @@
 !macro pdAppKey
   WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe" "FriendlyAppName" "PlanDesk"
   WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\DefaultIcon" "" "$INSTDIR\PlanDesk.exe,0"
-  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\shell\open\command" "" '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
+  WriteRegStr HKCU "Software\Classes\Applications\PlanDesk.exe\shell\open\command" "" '"$SYSDIR\conhost.exe" --headless "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
   !insertmacro pdSupported ".pdf"
   !insertmacro pdSupported ".fdf"
   !insertmacro pdSupported ".dxf"
@@ -49,7 +51,7 @@
   ReadRegStr $0 HKCU "Software\Classes\${PROGID}\shell\open\command" ""
   IfErrors +5 0
   WriteRegStr HKCU "Software\Classes\${PROGID}" "" "${DESC}"
-  WriteRegStr HKCU "Software\Classes\${PROGID}\shell\open\command" "" '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
+  WriteRegStr HKCU "Software\Classes\${PROGID}\shell\open\command" "" '"$SYSDIR\conhost.exe" --headless "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "$INSTDIR\resources\open-file.ps1" "%1"'
   WriteRegStr HKCU "Software\Classes\${PROGID}\Application" "ApplicationName" "PlanDesk"
   WriteRegStr HKCU "Software\Classes\${PROGID}\DefaultIcon" "" "$INSTDIR\PlanDesk.exe,0"
 !macroend
