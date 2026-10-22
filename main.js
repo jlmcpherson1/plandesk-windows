@@ -162,10 +162,27 @@ else {
   ipcMain.on("title-bar", (e, c) => {
     try { const w = BrowserWindow.fromWebContents(e.sender); if (w && c && /^#[0-9a-f]{3,8}$/i.test(c.color) && /^#[0-9a-f]{3,8}$/i.test(c.symbol)) w.setTitleBarOverlay({ color: c.color, symbolColor: c.symbol, height: TITLE_H }); } catch (err) {}
   });
+  // Show in folder: the exact file PlanDesk saved or opened (a full path it knows), else the newest file it knows by that name.
   ipcMain.handle("reveal", (_e, name) => {
-    const full = known[String(name || "").toLowerCase()];
+    const s = String(name || "");
+    let full = /[\\/]/.test(s) ? Object.values(known).find(k => k.toLowerCase() === s.toLowerCase()) : known[s.toLowerCase()];
     if (full && fs.existsSync(full)) { shell.showItemInFolder(full); return true; }
     return false;
+  });
+  // Save As with Windows' own save window, so PlanDesk knows the folder you picked (for Save and Show in folder later).
+  ipcMain.handle("save-as", async (e, name, buf, cur) => {
+    try {
+      const w = BrowserWindow.fromWebContents(e.sender) || win;
+      let dir = app.getPath("documents");
+      if (typeof cur === "string" && cur && !/\\PlanDesk Prints\\|\\PlanDesk email attachments\\|\\AppData\\/i.test(cur) && fs.existsSync(path.dirname(cur))) dir = path.dirname(cur);
+      const base = String(name || "Drawing.pdf").replace(/[<>:"/\\|?*\x00-\x1f]/g, "-").slice(0, 150) || "Drawing.pdf";
+      const r = await dialog.showSaveDialog(w, { title: "Save PDF", defaultPath: path.join(dir, /\.pdf$/i.test(base) ? base : base + ".pdf"), filters: [{ name: "PDF", extensions: ["pdf"] }] });
+      if (r.canceled || !r.filePath) return { ok: false, canceled: true };
+      let full = r.filePath; if (!/\.pdf$/i.test(full)) full += ".pdf";
+      const tmp = full + ".plandesk-saving"; fs.writeFileSync(tmp, Buffer.from(buf)); fs.renameSync(tmp, full);
+      remember(path.basename(full), full);
+      return { ok: true, path: full, name: path.basename(full) };
+    } catch (err) { return { ok: false, busy: /EBUSY|EPERM|EACCES/.test(err.code || ""), error: err.message }; }
   });
   ipcMain.handle("setup-printer", () => setupPrinter(true));
   // Save back to a file PlanDesk opened (only paths it was handed by Windows, never arbitrary ones).
