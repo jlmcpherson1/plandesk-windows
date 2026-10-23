@@ -20,7 +20,7 @@ module.exports = {
     identityName: env.STORE_IDENTITY_NAME || "HighlineProperties.PlanDesk",
     publisher: env.STORE_PUBLISHER || "CN=00000000-0000-0000-0000-000000000000",
     publisherDisplayName: env.STORE_PUBLISHER_NAME || "Highline Properties LLC",
-    displayName: env.STORE_DISPLAY_NAME || "PlanDesk: Markup & Takeoff", // must match the name reserved in Partner Center
+    displayName: env.STORE_DISPLAY_NAME || "PlanDesk: Markup &amp; Takeoff", // the name reserved in Partner Center; &amp; because electron-builder puts it into the XML manifest unescaped
     backgroundColor: "#13171b",
     showNameOnTiles: true,
     languages: ["en-US"],
